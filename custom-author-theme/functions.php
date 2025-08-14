@@ -421,3 +421,6 @@ function custom_author_theme_admin_css() {
     </style>';
 }
 add_action('admin_head', 'custom_author_theme_admin_css');
+
+// Force classic widgets interface (better for custom widgets)
+add_filter('use_widgets_block_editor', '__return_false');
