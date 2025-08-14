@@ -1,0 +1,239 @@
+/**
+ * Most Viewed Articles Widget Styles
+ */
+
+.mva-widget {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+/* Tabs */
+.mva-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+}
+
+.mva-tab {
+    flex: 1;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+    border-right: 1px solid #ddd;
+}
+
+.mva-tab:last-child {
+    border-right: none;
+}
+
+.mva-tab:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.mva-tab.active {
+    background: #fff;
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
+    margin-bottom: -1px;
+}
+
+/* Content */
+.mva-content {
+    padding: 0;
+}
+
+.mva-articles {
+    min-height: 100px;
+}
+
+.mva-articles-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mva-article-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+.mva-article-item:last-child {
+    border-bottom: none;
+}
+
+.mva-article-item:hover {
+    background-color: #f8f9fa;
+}
+
+.mva-rank {
+    font-weight: 600;
+    color: #0073aa;
+    margin-right: 12px;
+    min-width: 20px;
+    font-size: 14px;
+}
+
+.mva-article-link {
+    flex: 1;
+    text-decoration: none;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mva-article-link:hover {
+    color: #0073aa;
+}
+
+.mva-article-title {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mva-view-count {
+    font-size: 12px;
+    color: #666;
+    font-weight: 400;
+}
+
+/* Loading states */
+.mva-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.mva-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error and empty states */
+.mva-error,
+.mva-no-articles {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+    margin: 0;
+}
+
+.mva-error {
+    color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .mva-tab {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+    
+    .mva-article-item {
+        padding: 10px 12px;
+    }
+    
+    .mva-article-title {
+        font-size: 13px;
+    }
+    
+    .mva-view-count {
+        font-size: 11px;
+    }
+    
+    .mva-rank {
+        font-size: 13px;
+        min-width: 18px;
+        margin-right: 10px;
+    }
+}
+
+/* Widget customization in admin */
+.widget .mva-widget {
+    margin-bottom: 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .mva-widget {
+        background: #1e1e1e;
+        border-color: #333;
+        color: #fff;
+    }
+    
+    .mva-tabs {
+        background: #2d2d2d;
+        border-bottom-color: #333;
+    }
+    
+    .mva-tab {
+        color: #ccc;
+        border-right-color: #333;
+    }
+    
+    .mva-tab:hover {
+        background: #3a3a3a;
+        color: #fff;
+    }
+    
+    .mva-tab.active {
+        background: #1e1e1e;
+        color: #4a9eff;
+        border-bottom-color: #4a9eff;
+    }
+    
+    .mva-article-item {
+        border-bottom-color: #333;
+    }
+    
+    .mva-article-item:hover {
+        background-color: #2d2d2d;
+    }
+    
+    .mva-article-link {
+        color: #fff;
+    }
+    
+    .mva-article-link:hover {
+        color: #4a9eff;
+    }
+    
+    .mva-rank {
+        color: #4a9eff;
+    }
+    
+    .mva-view-count {
+        color: #999;
+    }
+}
