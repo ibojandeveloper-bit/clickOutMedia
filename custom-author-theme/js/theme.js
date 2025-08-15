@@ -341,3 +341,85 @@ document.addEventListener('DOMContentLoaded', function() {
     optimizeFID();
     optimizeCLS();
 });
+
+// Enhanced Lazy Loading with Fallback Support
+document.addEventListener('DOMContentLoaded', function() {
+    initAdvancedLazyLoading();
+    detectWebPSupport();
+});
+
+function initAdvancedLazyLoading() {
+    // Check for native lazy loading support
+    if ('loading' in HTMLImageElement.prototype) {
+        console.log('Native lazy loading supported');
+        
+        // Enhance native lazy loading with smooth transitions
+        const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+        lazyImages.forEach(img => {
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.3s ease';
+            
+            if (img.complete) {
+                img.style.opacity = '1';
+            } else {
+                img.addEventListener('load', function() {
+                    this.style.opacity = '1';
+                });
+            }
+            
+            // Error handling
+            img.addEventListener('error', function() {
+                this.style.opacity = '1';
+                this.style.backgroundColor = '#f0f0f0';
+            });
+        });
+    } else {
+        // Fallback for browsers without native support
+        console.log('Using IntersectionObserver fallback for lazy loading');
+        
+        if ('IntersectionObserver' in window) {
+            const lazyImageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src || img.src;
+                        img.style.opacity = '1';
+                        img.classList.remove('lazy');
+                        observer.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px 0px',
+                threshold: 0.01
+            });
+            
+            const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+            lazyImages.forEach(img => {
+                img.style.opacity = '0';
+                img.style.transition = 'opacity 0.3s ease';
+                lazyImageObserver.observe(img);
+            });
+        }
+    }
+}
+
+function detectWebPSupport() {
+    // WebP detection for progressive enhancement
+    function supportsWebP(callback) {
+        const webP = new Image();
+        webP.onload = webP.onerror = function () {
+            callback(webP.height === 2);
+        };
+        webP.src = "data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA";
+    }
+    
+    supportsWebP(function(supported) {
+        if (supported) {
+            document.documentElement.classList.add('webp-support');
+            console.log('WebP supported by browser');
+        } else {
+            document.documentElement.classList.add('no-webp');
+            console.log('WebP not supported by browser');
+        }
+    });
+}

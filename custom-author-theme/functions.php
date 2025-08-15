@@ -102,6 +102,7 @@ function custom_author_theme_user_profile_fields($user) {
     <h3><?php _e('Author Profile Information', 'custom-author-theme'); ?></h3>
     
     <table class="form-table">
+
         <tr>
             <th><label for="author_title"><?php _e('Author Title', 'custom-author-theme'); ?></label></th>
             <td>
@@ -230,6 +231,8 @@ add_action('edit_user_profile_update', 'custom_author_theme_save_user_profile_fi
 function custom_author_theme_admin_scripts($hook) {
     if ($hook == 'profile.php' || $hook == 'user-edit.php') {
         wp_enqueue_media();
+        wp_enqueue_script('custom-author-admin', get_template_directory_uri() . '/js/admin.js', array('jquery'), '1.0.0', true);
+
     }
 }
 add_action('admin_enqueue_scripts', 'custom_author_theme_admin_scripts');
@@ -289,14 +292,126 @@ function custom_author_theme_save_featured_news($post_id) {
 add_action('save_post', 'custom_author_theme_save_featured_news');
 
 /**
- * Optimize images for performance
+ * Comprehensive Image Optimization and Lazy Loading
  */
-function custom_author_theme_optimize_images($attr, $attachment, $size) {
+
+// 1. Enhanced lazy loading for all images
+function custom_author_theme_comprehensive_lazy_loading($attr, $attachment, $size) {
     $attr['loading'] = 'lazy';
     $attr['decoding'] = 'async';
+    
+    // Add responsive attributes
+    if (wp_is_mobile()) {
+        $attr['sizes'] = '(max-width: 768px) 100vw, 50vw';
+    } else {
+        $attr['sizes'] = '(max-width: 1200px) 100vw, 1200px';
+    }
+    
     return $attr;
 }
-add_filter('wp_get_attachment_image_attributes', 'custom_author_theme_optimize_images', 10, 3);
+add_filter('wp_get_attachment_image_attributes', 'custom_author_theme_comprehensive_lazy_loading', 10, 3);
+
+// 2. Add lazy loading to content images
+function custom_author_theme_content_lazy_loading($content) {
+    // Add loading="lazy" to all img tags in content
+    $content = str_replace('<img', '<img loading="lazy" decoding="async"', $content);
+    return $content;
+}
+add_filter('the_content', 'custom_author_theme_content_lazy_loading');
+add_filter('post_thumbnail_html', 'custom_author_theme_content_lazy_loading');
+
+// 3. WebP Support and MIME type
+function custom_author_theme_webp_support() {
+    // Add WebP MIME type support
+    add_filter('upload_mimes', function($mimes) {
+        $mimes['webp'] = 'image/webp';
+        return $mimes;
+    });
+    
+    // Display WebP images properly in media library
+    add_filter('file_is_displayable_image', function($result, $path) {
+        if ($result === false) {
+            $info = @getimagesize($path);
+            if ($info !== false && $info['mime'] === 'image/webp') {
+                $result = true;
+            }
+        }
+        return $result;
+    }, 10, 2);
+}
+add_action('init', 'custom_author_theme_webp_support');
+
+// 4. Automatic WebP conversion for uploads
+function custom_author_theme_convert_to_webp($metadata, $attachment_id) {
+    // Check if WebP is supported by server
+    if (!function_exists('imagewebp')) {
+        return $metadata;
+    }
+    
+    $file_path = get_attached_file($attachment_id);
+    $file_info = pathinfo($file_path);
+    
+    // Only convert JPEG and PNG to WebP
+    if (!in_array(strtolower($file_info['extension']), ['jpg', 'jpeg', 'png'])) {
+        return $metadata;
+    }
+    
+    $upload_dir = wp_upload_dir();
+    $webp_filename = $file_info['filename'] . '.webp';
+    $webp_path = $file_info['dirname'] . '/' . $webp_filename;
+    
+    // Create image resource
+    $image = null;
+    switch (strtolower($file_info['extension'])) {
+        case 'jpg':
+        case 'jpeg':
+            $image = @imagecreatefromjpeg($file_path);
+            break;
+        case 'png':
+            $image = @imagecreatefrompng($file_path);
+            break;
+    }
+    
+    // Convert to WebP
+    if ($image && @imagewebp($image, $webp_path, 85)) {
+        // Store WebP info in metadata
+        $metadata['webp_version'] = array(
+            'file' => $webp_filename,
+            'path' => $webp_path,
+            'url' => str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $webp_path)
+        );
+        @imagedestroy($image);
+    }
+    
+    return $metadata;
+}
+add_filter('wp_generate_attachment_metadata', 'custom_author_theme_convert_to_webp', 10, 2);
+
+// 5. Serve WebP to supported browsers
+function custom_author_theme_serve_webp_images($image, $attachment_id, $size, $icon) {
+    // Check if browser supports WebP
+    $accepts_webp = false;
+    if (isset($_SERVER['HTTP_ACCEPT'])) {
+        $accepts_webp = strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false;
+    }
+    
+    if (!$accepts_webp) {
+        return $image;
+    }
+    
+    // Get WebP version if available
+    $metadata = wp_get_attachment_metadata($attachment_id);
+    if (isset($metadata['webp_version']['url'])) {
+        // Replace original image URL with WebP URL
+        $original_url = wp_get_attachment_image_url($attachment_id, $size);
+        if ($original_url) {
+            $image[0] = $metadata['webp_version']['url'];
+        }
+    }
+    
+    return $image;
+}
+add_filter('wp_get_attachment_image_src', 'custom_author_theme_serve_webp_images', 10, 4);
 
 /**
  * Add preload hints for critical resources
