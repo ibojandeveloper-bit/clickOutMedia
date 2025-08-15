@@ -480,7 +480,7 @@ img[loading="lazy"] {
 .author-avatar {
     overflow: hidden;
     border-radius: 6px;
-    background-color: #f8f9fa;
+    background-color: #fff;
 }
 
 .post-thumbnail img,
