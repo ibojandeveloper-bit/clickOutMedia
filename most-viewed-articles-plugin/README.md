@@ -20,7 +20,9 @@ A WordPress plugin that creates a widget displaying the most viewed articles wit
 1. **Download the plugin files**:
    - `most-viewed-articles.php` (main plugin file)
    - `assets/js/most-viewed-articles.js` (JavaScript file)
+   - `most-viewed-articles-mobile.js` (JavaScript Mobile opt file)
    - `assets/css/most-viewed-articles.css` (CSS file)
+   - `most-viewed-articles-mobile.css` (CSS Mobile File)
 
 2. **Create plugin directory**:
    ```
@@ -133,7 +135,7 @@ The plugin uses WordPress post meta to store view data:
 ## Customization
 
 ### Styling
-Modify `assets/css/most-viewed-articles.css` or `most-viewed-articles-mobile.css` to customize appearance:
+Modify `assets/css/most-viewed-articles.css` to customize appearance:
 
 ```css
 /* Custom colors */

@@ -24,6 +24,11 @@ clickOutMedia/
 │   ├── author.php                   # Custom author page template
 │   ├── style.css                    # Mobile-first responsive styles
 │   ├── functions.php                # Theme functionality
+│   ├── sidebar.php                  # Sidebar page
+│   ├── header.php                   # Header template
+│   ├── footer.php                   # Footer template
+│   ├── index.php                    # Index page
+│   ├── js/                          # Theme frontend JavaScript
 │   └── README.md                    # Theme installation guide
 ├── performance-and-seo/             # Task 3: Performance Optimization and SEO Best Practices 
 │   ├── answer.md                    # Answer of Task 3
@@ -56,7 +61,6 @@ Database Indexing: Custom indexes for 50-75% faster queries
 Query Optimization: Efficient JOINs and LIMIT clauses
 Memory Management: Automatic cleanup and data retention policies
 Client-Side Optimization: JavaScript performance with lazy loading
-Network Efficiency: GZIP compression and minimal payloads
 
 Task 2: Custom Author Page Theme
 Features Implemented:
