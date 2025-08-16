@@ -33,9 +33,11 @@ A WordPress plugin that creates a widget displaying the most viewed articles wit
    ├── most-viewed-articles.php
    ├── assets/
    │   ├── js/
-   │   │   └── most-viewed-articles.js
+   │   │   ├── most-viewed-articles.js
+   │   │   └── most-viewed-articles-mobile.js
    │   └── css/
-   │       └── most-viewed-articles.css
+   │       ├── most-viewed-articles.css
+   │       └── most-viewed-articles-mobile.css
    └── README.md
    ```
 
@@ -83,14 +85,16 @@ The plugin uses WordPress post meta to store view data:
 ## File Structure
 
 ```
-most-viewed-articles/
-├── most-viewed-articles.php          # Main plugin file
-├── assets/
-│   ├── js/
-│   │   └── most-viewed-articles.js   # Frontend JavaScript
-│   └── css/
-│       └── most-viewed-articles.css  # Widget styling
-└── README.md                         # Documentation
+   most-viewed-articles/
+   ├── most-viewed-articles.php                   # Main Plugin File
+   ├── assets/
+   │   ├── js/
+   │   │   ├── most-viewed-articles.js            # Frontend javascript
+   │   │   └── most-viewed-articles-mobile.js     # Frontend js - Mobile optimization
+   │   └── css/
+   │       ├── most-viewed-articles.css           # Widget Styling
+   │       └── most-viewed-articles-mobile.css    # Widget Mobile styling 
+   └── README.md                                  # Documentation
 ```
 
 ## Hooks and Filters
@@ -129,7 +133,7 @@ most-viewed-articles/
 ## Customization
 
 ### Styling
-Modify `assets/css/most-viewed-articles.css` to customize appearance:
+Modify `assets/css/most-viewed-articles.css` or `most-viewed-articles-mobile.css` to customize appearance:
 
 ```css
 /* Custom colors */

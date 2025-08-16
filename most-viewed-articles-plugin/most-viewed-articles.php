@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Most Viewed Articles (Optimized)
+ * Plugin Name: Most Viewed Articles
  * Description: A high-performance widget that displays the most viewed articles with tabbed interface for "This Week" and "This Month".
  * Version: 1.1.0
  * Author: Bojan Ilievski
@@ -204,9 +204,9 @@ public function ajax_get_most_viewed() {
     }
     
     $timeframe = isset($_POST['timeframe']) ? sanitize_text_field($_POST['timeframe']) : 'week';
-    $minimal = isset($_POST['minimal']) && $_POST['minimal'] === '1';
+    $is_mobile = isset($_POST['mobile']) && $_POST['mobile'] === 'true';
     
-    $cache_key = "mva_articles_{$timeframe}_10";
+    $cache_key = "mva_articles_{$timeframe}_10" . ($is_mobile ? '_mobile' : '');
     $was_cached = get_transient($cache_key) !== false;
     
     $start_time = microtime(true);
@@ -217,22 +217,16 @@ public function ajax_get_most_viewed() {
         'articles' => $articles,
         'query_time_ms' => $query_time,
         'cached' => $was_cached,
-        'count' => count($articles)
+        'count' => count($articles),
+        'mobile' => $is_mobile
     );
     
-    // Add minimal response option to reduce payload size
-    if (!$minimal) {
-        $response['timeframe'] = $timeframe;
-        $response['timestamp'] = current_time('timestamp');
-    }
-    
-    // Add compression headers
-    if (!headers_sent()) {
+    // Mobile-specific compression
+    if ($is_mobile && !headers_sent()) {
         header('Content-Type: application/json; charset=utf-8');
         if (function_exists('gzencode') && strpos($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip') !== false) {
             header('Content-Encoding: gzip');
-            $output = gzencode(json_encode(array('success' => true, 'data' => $response)));
-            echo $output;
+            echo gzencode(json_encode(array('success' => true, 'data' => $response)));
             exit;
         }
     }
