@@ -381,16 +381,21 @@ public function get_most_viewed_articles_fast($timeframe = 'week', $limit = 10) 
      * Plugin activation
      */
     public function activate() {
-        // Create index for better performance
-        global $wpdb;
-        
-        $wpdb->query("
-            CREATE INDEX IF NOT EXISTS idx_mva_views 
-            ON {$wpdb->postmeta} (meta_key, post_id) 
-            WHERE meta_key = '_mva_views_data'
-        ");
-        
-        flush_rewrite_rules();
+    global $wpdb;
+    
+    // Composite indexes for better performance
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_mva_post_meta_composite 
+        ON {$wpdb->postmeta} (meta_key, post_id, meta_value(50))
+    ");
+    
+    $wpdb->query("
+        CREATE INDEX IF NOT EXISTS idx_posts_type_status_date 
+        ON {$wpdb->posts} (post_type, post_status, post_date DESC)
+    ");
+    
+    // Analyze tables for optimization
+    $wpdb->query("ANALYZE TABLE {$wpdb->posts}, {$wpdb->postmeta}");
     }
     
     /**
