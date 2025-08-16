@@ -53,8 +53,32 @@ class Most_Viewed_Articles {
     /**
      * Enqueue scripts and styles with optimization
      */
-    public function enqueue_scripts() {
-        // Enqueue optimized JavaScript
+public function enqueue_scripts() {
+    // Only load on pages with the widget
+    if (!is_active_widget(false, false, 'most_viewed_articles_widget')) {
+        return;
+    }
+    
+    // Mobile-specific optimizations
+    if (wp_is_mobile()) {
+        // Load mobile-optimized JavaScript
+        wp_enqueue_script(
+            'most-viewed-articles-mobile',
+            plugins_url('assets/js/most-viewed-articles-mobile.js', __FILE__),
+            array('jquery'),
+            self::VERSION,
+            true
+        );
+        
+        // Mobile-optimized CSS
+        wp_enqueue_style(
+            'most-viewed-articles-mobile',
+            plugins_url('assets/css/most-viewed-articles-mobile.css', __FILE__),
+            array(),
+            self::VERSION
+        );
+    } else {
+        // Desktop version
         wp_enqueue_script(
             'most-viewed-articles',
             plugins_url('assets/js/most-viewed-articles.js', __FILE__),
@@ -63,22 +87,27 @@ class Most_Viewed_Articles {
             true
         );
         
-        // Enqueue optimized CSS
         wp_enqueue_style(
             'most-viewed-articles',
             plugins_url('assets/css/most-viewed-articles.css', __FILE__),
             array(),
             self::VERSION
         );
-        
-        // Localize script with performance settings
-        wp_localize_script('most-viewed-articles', 'mva_ajax', array(
+    }
+    
+    // Localize script
+    wp_localize_script(
+        wp_is_mobile() ? 'most-viewed-articles-mobile' : 'most-viewed-articles',
+        'mva_ajax',
+        array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('mva_nonce'),
             'cache_enabled' => true,
-            'cache_duration' => self::CACHE_EXPIRATION
-        ));
-    }
+            'cache_duration' => self::CACHE_EXPIRATION,
+            'is_mobile' => wp_is_mobile()
+        )
+    );
+}
     
     /**
      * Track post views with performance optimization
@@ -89,7 +118,7 @@ class Most_Viewed_Articles {
         }
         
         global $post;
-              if (!$post || $post->post_type !== 'post') {
+              if ($post->post_type !== 'post') {
             return;
         }  
 
