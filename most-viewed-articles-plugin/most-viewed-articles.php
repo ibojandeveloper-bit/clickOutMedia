@@ -309,58 +309,6 @@ public function get_most_viewed_articles($timeframe = 'week', $limit = 10) {
     return $final_articles;
 }
 
-/**
- * Alternative high-performance method using aggregated data (Recommended for high traffic)
- */
-public function get_most_viewed_articles_fast($timeframe = 'week', $limit = 10) {
-    $cache_key = "mva_fast_{$timeframe}_{$limit}";
-    $cached_result = get_transient($cache_key);
-    
-    if ($cached_result !== false) {
-        return $cached_result;
-    }
-    
-    global $wpdb;
-    
-    // Use a separate aggregated table for even better performance (optional)
-    // This would require creating a daily/weekly aggregation job
-    
-    $current_time = current_time('timestamp');
-    $days = ($timeframe === 'week') ? 7 : 30;
-    $time_start = $current_time - ($days * DAY_IN_SECONDS);
-    
-    // Super optimized query - assumes you have a views summary table
-    $query = $wpdb->prepare("
-        SELECT p.ID, p.post_title, COUNT(*) as view_count
-        FROM {$wpdb->posts} p
-        INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-        WHERE p.post_type = 'post'
-        AND p.post_status = 'publish'
-        AND pm.meta_key = '_mva_views_data'
-        AND p.post_date >= %s
-        GROUP BY p.ID
-        ORDER BY view_count DESC
-        LIMIT %d
-    ", date('Y-m-d', $time_start), $limit);
-    
-    $posts = $wpdb->get_results($query);
-    $articles = array();
-    
-    foreach ($posts as $post) {
-        $articles[] = array(
-            'id' => (int)$post->ID,
-            'title' => $post->post_title,
-            'permalink' => get_permalink($post->ID),
-            'views' => (int)$post->view_count
-        );
-    }
-    
-    // Longer cache for this method since it's more expensive to calculate
-    $cache_duration = ($timeframe === 'month') ? (self::CACHE_EXPIRATION * 6) : (self::CACHE_EXPIRATION * 2);
-    set_transient($cache_key, $articles, $cache_duration);
-    
-    return $articles;
-}
     
     /**
      * Clear article cache
