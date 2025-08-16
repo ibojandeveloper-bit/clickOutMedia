@@ -25,7 +25,9 @@ clickOutMedia/
 │   ├── style.css                    # Mobile-first responsive styles
 │   ├── functions.php                # Theme functionality
 │   └── README.md                    # Theme installation guide
-└── README.md                       # This file - Project overview
+├── performance-and-seo/             # Task 3: Performance Optimization and SEO Best Practices 
+│   ├── answer.md                    # Answer of Task 3
+└── README.md                        # This file - Project overview
 
 
 ## Technical Implementation
