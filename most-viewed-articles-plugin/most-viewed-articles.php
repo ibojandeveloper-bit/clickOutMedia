@@ -3,7 +3,7 @@
  * Plugin Name: Most Viewed Articles (Optimized)
  * Description: A high-performance widget that displays the most viewed articles with tabbed interface for "This Week" and "This Month".
  * Version: 1.1.0
- * Author: Your Name
+ * Author: Bojan Ilievski
  * Text Domain: most-viewed-articles
  * Domain Path: /languages
  */
@@ -89,10 +89,10 @@ class Most_Viewed_Articles {
         }
         
         global $post;
-        
-        if (!$post || $post->post_type !== 'post') {
+              if (!$post || $post->post_type !== 'post') {
             return;
-        }
+        }  
+
         
         $post_id = $post->ID;
         $user_ip = $this->get_user_ip();
@@ -165,118 +165,202 @@ class Most_Viewed_Articles {
         return isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
     }
     
-    /**
-     * AJAX handler for getting most viewed articles (Performance Optimized)
-     */
-    public function ajax_get_most_viewed() {
-        // Add performance headers
-        header('Cache-Control: public, max-age=' . self::CACHE_EXPIRATION);
-        header('Content-Type: application/json; charset=utf-8');
-        
-        check_ajax_referer('mva_nonce', 'nonce');
-        
-        $timeframe = sanitize_text_field($_POST['timeframe']);
-        
-        // Time the query for performance monitoring
-        $start_time = microtime(true);
-        $articles = $this->get_most_viewed_articles($timeframe);
-        $query_time = round((microtime(true) - $start_time) * 1000, 2);
-        
-        // Check if result was cached
-        $cache_key = "mva_articles_{$timeframe}_10";
-        $was_cached = get_transient($cache_key) !== false;
-        
-        wp_send_json_success(array(
-            'articles' => $articles,
-            'query_time_ms' => $query_time,
-            'cached' => $was_cached,
-            'timeframe' => $timeframe,
-            'count' => count($articles)
-        ));
+/**
+ * AJAX handler for getting most viewed articles (Performance Optimized)
+ */
+public function ajax_get_most_viewed() {
+    if (!check_ajax_referer('mva_nonce', 'nonce', false)) {
+        wp_send_json_error('Invalid nonce');
+        return;
     }
     
-    /**
-     * Get most viewed articles for a timeframe (Highly Optimized)
-     */
-    public function get_most_viewed_articles($timeframe = 'week', $limit = 10) {
-        // Check cache first (Performance Layer 1)
-        $cache_key = "mva_articles_{$timeframe}_{$limit}";
-        $cached_result = get_transient($cache_key);
-        
-        if ($cached_result !== false) {
-            return $cached_result;
+    $timeframe = isset($_POST['timeframe']) ? sanitize_text_field($_POST['timeframe']) : 'week';
+    $minimal = isset($_POST['minimal']) && $_POST['minimal'] === '1';
+    
+    $cache_key = "mva_articles_{$timeframe}_10";
+    $was_cached = get_transient($cache_key) !== false;
+    
+    $start_time = microtime(true);
+    $articles = $this->get_most_viewed_articles($timeframe);
+    $query_time = round((microtime(true) - $start_time) * 1000, 2);
+    
+    $response = array(
+        'articles' => $articles,
+        'query_time_ms' => $query_time,
+        'cached' => $was_cached,
+        'count' => count($articles)
+    );
+    
+    // Add minimal response option to reduce payload size
+    if (!$minimal) {
+        $response['timeframe'] = $timeframe;
+        $response['timestamp'] = current_time('timestamp');
+    }
+    
+    // Add compression headers
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        if (function_exists('gzencode') && strpos($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip') !== false) {
+            header('Content-Encoding: gzip');
+            $output = gzencode(json_encode(array('success' => true, 'data' => $response)));
+            echo $output;
+            exit;
+        }
+    }
+    
+    wp_send_json_success($response);
+}
+
+/**
+ * Get most viewed articles for a timeframe (Highly Optimized)
+ */
+public function get_most_viewed_articles($timeframe = 'week', $limit = 10) {
+    // Check cache first (Performance Layer 1) - Extended cache time for month
+    $cache_duration = ($timeframe === 'month') ? (self::CACHE_EXPIRATION * 4) : self::CACHE_EXPIRATION;
+    $cache_key = "mva_articles_{$timeframe}_{$limit}";
+    $cached_result = get_transient($cache_key);
+    
+    if ($cached_result !== false) {
+        return $cached_result;
+    }
+    
+    global $wpdb;
+    
+    $current_time = current_time('timestamp');
+    
+    // Calculate time ranges
+    $time_start = ($timeframe === 'week') 
+        ? $current_time - (7 * DAY_IN_SECONDS)
+        : $current_time - (30 * DAY_IN_SECONDS);
+    
+    // MAJOR OPTIMIZATION: Use view count meta for initial filtering
+    $query = $wpdb->prepare("
+        SELECT p.ID, p.post_title, 
+               CAST(pm_count.meta_value AS UNSIGNED) as total_views,
+               pm_data.meta_value as views_data
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm_count ON (p.ID = pm_count.post_id AND pm_count.meta_key = '_mva_view_count')
+        INNER JOIN {$wpdb->postmeta} pm_data ON (p.ID = pm_data.post_id AND pm_data.meta_key = '_mva_views_data')
+        WHERE p.post_type = 'post'
+        AND p.post_status = 'publish'
+        AND CAST(pm_count.meta_value AS UNSIGNED) > 0
+        ORDER BY CAST(pm_count.meta_value AS UNSIGNED) DESC
+        LIMIT %d
+    ", $limit * 2); // Reduced multiplier since we're pre-filtering
+    
+    $posts = $wpdb->get_results($query);
+    
+    if (empty($posts)) {
+        // Cache empty result briefly to avoid repeated queries
+        set_transient($cache_key, array(), 300);
+        return array();
+    }
+    
+    $articles = array();
+    
+    foreach ($posts as $post) {
+        $views_data = maybe_unserialize($post->views_data);
+        if (!is_array($views_data)) {
+            continue;
         }
         
-        global $wpdb;
+        $view_count = 0;
         
-        $current_time = current_time('timestamp');
-        
-        // Calculate time ranges
-        if ($timeframe === 'week') {
-            $time_start = $current_time - (7 * DAY_IN_SECONDS);
-        } else {
-            $time_start = $current_time - (30 * DAY_IN_SECONDS);
-        }
-        
-        // Highly optimized query - only get posts that definitely have views
-        $query = $wpdb->prepare("
-            SELECT p.ID, p.post_title, pm.meta_value as views_data
-            FROM {$wpdb->posts} p
-            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-            WHERE p.post_type = 'post'
-            AND p.post_status = 'publish'
-            AND pm.meta_key = '_mva_views_data'
-            AND pm.meta_value != ''
-            AND pm.meta_value != 'a:0:{}'
-            ORDER BY p.post_date DESC
-            LIMIT %d
-        ", $limit * 3); // Get more posts to account for filtering
-        
-        $posts = $wpdb->get_results($query);
-        $articles = array();
-        
-        foreach ($posts as $post) {
-            $views_data = maybe_unserialize($post->views_data);
-            if (!$views_data || !is_array($views_data)) {
-                continue;
+        // Optimized counting with early break for better performance
+        foreach ($views_data as $view) {
+            if (!isset($view['timestamp'])) continue;
+            
+            if ($view['timestamp'] >= $time_start) {
+                $view_count++;
             }
-            
-            $view_count = 0;
-            
-            // Optimized counting with early break
-            foreach ($views_data as $view) {
-                if (isset($view['timestamp']) && $view['timestamp'] >= $time_start) {
-                    $view_count++;
-                }
-            }
-            
-            if ($view_count > 0) {
-                $articles[] = array(
-                    'id' => $post->ID,
-                    'title' => $post->post_title,
-                    'permalink' => get_permalink($post->ID),
-                    'views' => $view_count
-                );
-            }
-            
-            // Early exit optimization
-            if (count($articles) >= $limit) {
+            // Skip older entries since array should be somewhat chronological
+            elseif ($view['timestamp'] < ($time_start - DAY_IN_SECONDS)) {
                 break;
             }
         }
         
-        // Sort by view count (highest first)
+        if ($view_count > 0) {
+            $articles[] = array(
+                'id' => (int)$post->ID,
+                'title' => $post->post_title,
+                'permalink' => get_permalink($post->ID),
+                'views' => $view_count
+            );
+        }
+        
+        // Early exit when we have enough articles
+        if (count($articles) >= $limit) {
+            break;
+        }
+    }
+    
+    // Sort by timeframe-specific view count (not total views)
+    if (count($articles) > 1) {
         usort($articles, function($a, $b) {
             return $b['views'] - $a['views'];
         });
-        
-        $final_articles = array_slice($articles, 0, $limit);
-        
-        // Cache for 5 minutes (Performance Layer 2)
-        set_transient($cache_key, $final_articles, self::CACHE_EXPIRATION);
-        
-        return $final_articles;
     }
+    
+    $final_articles = array_slice($articles, 0, $limit);
+    
+    // Cache with different durations based on timeframe
+    set_transient($cache_key, $final_articles, $cache_duration);
+    
+    return $final_articles;
+}
+
+/**
+ * Alternative high-performance method using aggregated data (Recommended for high traffic)
+ */
+public function get_most_viewed_articles_fast($timeframe = 'week', $limit = 10) {
+    $cache_key = "mva_fast_{$timeframe}_{$limit}";
+    $cached_result = get_transient($cache_key);
+    
+    if ($cached_result !== false) {
+        return $cached_result;
+    }
+    
+    global $wpdb;
+    
+    // Use a separate aggregated table for even better performance (optional)
+    // This would require creating a daily/weekly aggregation job
+    
+    $current_time = current_time('timestamp');
+    $days = ($timeframe === 'week') ? 7 : 30;
+    $time_start = $current_time - ($days * DAY_IN_SECONDS);
+    
+    // Super optimized query - assumes you have a views summary table
+    $query = $wpdb->prepare("
+        SELECT p.ID, p.post_title, COUNT(*) as view_count
+        FROM {$wpdb->posts} p
+        INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+        WHERE p.post_type = 'post'
+        AND p.post_status = 'publish'
+        AND pm.meta_key = '_mva_views_data'
+        AND p.post_date >= %s
+        GROUP BY p.ID
+        ORDER BY view_count DESC
+        LIMIT %d
+    ", date('Y-m-d', $time_start), $limit);
+    
+    $posts = $wpdb->get_results($query);
+    $articles = array();
+    
+    foreach ($posts as $post) {
+        $articles[] = array(
+            'id' => (int)$post->ID,
+            'title' => $post->post_title,
+            'permalink' => get_permalink($post->ID),
+            'views' => (int)$post->view_count
+        );
+    }
+    
+    // Longer cache for this method since it's more expensive to calculate
+    $cache_duration = ($timeframe === 'month') ? (self::CACHE_EXPIRATION * 6) : (self::CACHE_EXPIRATION * 2);
+    set_transient($cache_key, $articles, $cache_duration);
+    
+    return $articles;
+}
     
     /**
      * Clear article cache

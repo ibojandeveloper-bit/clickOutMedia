@@ -97,7 +97,8 @@
                 data: {
                     action: 'get_most_viewed',
                     timeframe: timeframe,
-                    nonce: mva_ajax.nonce
+                    nonce: mva_ajax.nonce,
+                    minimal: true
                 },
                 success: function(response) {
                     if (response.success) {
