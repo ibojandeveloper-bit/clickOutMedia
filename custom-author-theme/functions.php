@@ -537,5 +537,17 @@ function custom_author_theme_admin_css() {
 }
 add_action('admin_head', 'custom_author_theme_admin_css');
 
+// Mobile image optimization
+function mobile_image_optimization() {
+    add_filter('wp_get_attachment_image_attributes', function($attr, $attachment, $size) {
+        $attr['loading'] = 'lazy';
+        $attr['sizes'] = '(max-width: 480px) 100vw, (max-width: 768px) 50vw, 33vw';
+        return $attr;
+    }, 10, 3);
+}
+add_action('init', 'mobile_image_optimization');
+
+
+
 // Force classic widgets interface (better for custom widgets)
 add_filter('use_widgets_block_editor', '__return_false');
